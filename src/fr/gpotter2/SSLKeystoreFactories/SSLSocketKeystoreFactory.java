@@ -133,7 +133,7 @@ public class SSLSocketKeystoreFactory {
 	public static SSLSocket getSocketWithCert(InetAddress ip, int port, InputStream pathToCert, String passwordFromCert) throws IOException,
 									KeyManagementException, NoSuchAlgorithmException, CertificateException, KeyStoreException {
 		X509TrustManager[] tmm;
-		KeyStore ks  = KeyStore.getInstance("BKS");
+		KeyStore ks  = KeyStore.getInstance("JKS"/*TODO Change here the JKS by a BKS if you are using Android*/);
 		ks.load(pathToCert, passwordFromCert.toCharArray());
 		tmm=tm(ks);
 		SSLContext ctx = SSLContext.getInstance("TLSv1.2");
