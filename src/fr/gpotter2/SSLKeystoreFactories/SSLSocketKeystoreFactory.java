@@ -16,13 +16,12 @@
  * 
  */
 
-package util;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -43,7 +42,7 @@ import javax.net.ssl.X509TrustManager;
  *
  */
 public class SSLSocketKeystoreFactory {
-	
+
 	/**
 	 * 
 	 * @param ip The IP to connect the socket to
@@ -56,10 +55,9 @@ public class SSLSocketKeystoreFactory {
 	 * @throws CertificateException If the certificate is not correct (null or damaged) or the password is incorrect
 	 * @throws NoSuchAlgorithmException If the certificate is from an unknown type
 	 * @throws KeyStoreException If your system is not compatible with JKS KeyStore certificates
-	 * @author gpotter2
 	 */
 	public static SSLSocket getSocketWithCert(String ip, int port, String pathToCert, String passwordFromCert) throws IOException,
-									KeyManagementException, NoSuchAlgorithmException, CertificateException, KeyStoreException{
+									KeyManagementException, NoSuchAlgorithmException, CertificateException, KeyStoreException, SecurityException {
 		InetAddress ip2 = InetAddress.getByName(ip);
 		if(ip2 == null){
 			new NullPointerException("The ip must be a correct IP !").printStackTrace();
@@ -67,7 +65,7 @@ public class SSLSocketKeystoreFactory {
 		}
 		File f = new File(pathToCert);
 		if(!f.exists()){
-			new NullPointerException("The specified path point to a non existing file !");
+			new NullPointerException("The specified path point to a non existing file !").printStackTrace();
 			return null;
 		}
 		return getSocketWithCert(ip2, port, new FileInputStream(f), passwordFromCert);
@@ -85,10 +83,9 @@ public class SSLSocketKeystoreFactory {
 	 * @throws CertificateException If the certificate is not correct (null or damaged) or the password is incorrect
 	 * @throws NoSuchAlgorithmException If the certificate is from an unknown type
 	 * @throws KeyStoreException If your system is not compatible with JKS KeyStore certificates
-	 * @author gpotter2
 	 */
 	public static SSLSocket getSocketWithCert(String ip, int port, InputStream pathToCert, String passwordFromCert) throws IOException,
-									KeyManagementException, NoSuchAlgorithmException, CertificateException, KeyStoreException{
+									KeyManagementException, NoSuchAlgorithmException, CertificateException, KeyStoreException, SecurityException {
 		InetAddress ip2 = InetAddress.getByName(ip);
 		if(ip2 == null){
 			new NullPointerException("The ip must be a correct IP !").printStackTrace();
@@ -109,13 +106,12 @@ public class SSLSocketKeystoreFactory {
 	 * @throws CertificateException If the certificate is not correct (null or damaged) or the password is incorrect
 	 * @throws NoSuchAlgorithmException If the certificate is from an unknown type
 	 * @throws KeyStoreException If your system is not compatible with JKS KeyStore certificates
-	 * @author gpotter2
 	 */
 	public static SSLSocket getSocketWithCert(InetAddress ip, int port, String pathToCert, String passwordFromCert) throws IOException,
 									KeyManagementException, NoSuchAlgorithmException, CertificateException, KeyStoreException{
 		File f = new File(pathToCert);
 		if(!f.exists()){
-			new NullPointerException("The specified path point to a non existing file !");
+			new NullPointerException("The specified path point to a non existing file !").printStackTrace();
 			return null;
 		}
 		return getSocketWithCert(ip, port, new FileInputStream(f), passwordFromCert);
@@ -133,39 +129,41 @@ public class SSLSocketKeystoreFactory {
 	 * @throws CertificateException If the certificate is not correct (null or damaged) or the password is incorrect
 	 * @throws NoSuchAlgorithmException If the certificate is from an unknown type
 	 * @throws KeyStoreException If your system is not compatible with JKS KeyStore certificates
-	 * @author gpotter2
 	 */
 	public static SSLSocket getSocketWithCert(InetAddress ip, int port, InputStream pathToCert, String passwordFromCert) throws IOException,
-									KeyManagementException, NoSuchAlgorithmException, CertificateException, KeyStoreException{
-		TrustManager[] tmm = new TrustManager[1];
-		KeyStore ks  = KeyStore.getInstance("JKS");
+									KeyManagementException, NoSuchAlgorithmException, CertificateException, KeyStoreException {
+		X509TrustManager[] tmm;
+		KeyStore ks  = KeyStore.getInstance("BKS");
 		ks.load(pathToCert, passwordFromCert.toCharArray());
-		tmm[0]=tm(ks);
-		SSLContext ctx = SSLContext.getInstance("TLS");
+		tmm=tm(ks);
+		SSLContext ctx = SSLContext.getInstance("TLSv1.2");
 		ctx.init(null, tmm, null);
-		SSLSocketFactory SocketFactory = (SSLSocketFactory) ctx.getSocketFactory();
-		return (SSLSocket) SocketFactory.createSocket(ip, port);
+		SSLSocketFactory SocketFactory = ctx.getSocketFactory();
+		SSLSocket socket = (SSLSocket) SocketFactory.createSocket();
+		socket.connect(new InetSocketAddress(ip, port), 5000);
+		return socket;
 	}
-	
+
 	/**
 	 * Util class to get the X509TrustManager
-	 * 
-	 * 
-	 * @param keystore
-	 * @return
+	 *
+	 *
+	 * @param keystore The Keystore to instanciate
+	 * @return The asked X509TrustManager
 	 * @throws NoSuchAlgorithmException
 	 * @throws KeyStoreException
-	 * @author gpotter2
 	 */
-	private static X509TrustManager tm(KeyStore keystore) throws NoSuchAlgorithmException, KeyStoreException {
+	private static X509TrustManager[] tm(KeyStore keystore) throws NoSuchAlgorithmException, KeyStoreException {
 		TrustManagerFactory trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        trustMgrFactory.init(keystore);
-        TrustManager trustManagers[] = trustMgrFactory.getTrustManagers();
-        for (int i = 0; i < trustManagers.length; i++) {
-            if (trustManagers[i] instanceof X509TrustManager) {
-                return (X509TrustManager) trustManagers[i];
-            }
-        }
-        return null;
-    };
+		trustMgrFactory.init(keystore);
+		TrustManager trustManagers[] = trustMgrFactory.getTrustManagers();
+		for (TrustManager trustManager : trustManagers) {
+			if (trustManager instanceof X509TrustManager) {
+				X509TrustManager[] tr = new X509TrustManager[1];
+				tr[0] = (X509TrustManager) trustManager;
+				return tr;
+			}
+		}
+		return null;
+	}
 }
