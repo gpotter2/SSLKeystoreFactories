@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2015 Gabriel POTTER (gpotter2)
+ *  Copyright (C) 2015 gpotter2
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
